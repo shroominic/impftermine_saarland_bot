@@ -161,5 +161,7 @@ class ImpfterminBot:
 
                 if 's' in input('Type "s" to stop the loop: '):
                     vaccination_appointment_is_bookable = True
+            else:
+                print("c'est bizarre")
 
 
