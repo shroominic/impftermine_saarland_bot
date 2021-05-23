@@ -1,12 +1,12 @@
 import impftermine_bot as ibot
 
+# Insert email for automatic login
 email = None
 
 bot = ibot.ImpfterminBot(email)
-try:
-    bot.init_chrome(chromedriver_path='./chromedriver')
-except Exception as e:
-    print(e)
+
+# Download: https://chromedriver.chromium.org/
+bot.init_chrome(chromedriver_path='./chromedriver')
 
 bot.open_target_page()
 bot.login()
