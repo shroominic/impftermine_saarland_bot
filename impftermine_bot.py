@@ -5,6 +5,12 @@ import random
 import time
 
 
+# URL's
+url = 'https://www.impfen-saarland.de/'
+login_url = f'{url}service/login'
+
+
+# Static Functions
 def xpath_soup(soup_element):
     components = []
     child = soup_element if soup_element.name else soup_element.parent
@@ -20,138 +26,140 @@ def xpath_soup(soup_element):
     return '/%s' % '/'.join(components)
 
 
-def click_button(web_driver, text_de, text_en=None):
-    btn_element = None
-    if text_en is not None:
-        for btn in soup.find_all('button'):
-            if text_de or text_en in str(btn):
+# Impftermin Bot Class
+class ImpfterminBot:
+
+    # Initialisation
+    def __init__(self, email=None):
+        self.email = email
+
+        if self.email is None:
+            self.anonymous = True
+
+        self.driver = None
+        self.soup = None
+
+    def init_chrome(self, chromedriver_path):
+        chrome_options = Options()
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--window-size=720,1080")
+        self.driver = webdriver.Chrome(
+            executable_path=chromedriver_path,
+            options=chrome_options)
+
+    # Utility Methods
+    def refresh_soup(self):
+        self.soup = BS(self.driver.page_source, 'lxml')
+
+    def click_button(self, text):
+        btn_element = None
+
+        for btn in self.soup.find_all('button'):
+            if text in str(btn):
                 btn_element = btn
-    else:
-        for btn in soup.find_all('button'):
-            if text_de in str(btn):
-                btn_element = btn
 
-    web_driver.find_element_by_xpath(xpath_soup(btn_element)).click()
+        xpath = xpath_soup(btn_element)
+        self.driver.find_element_by_xpath(xpath).click()
 
+    def click_time_selector(self):
+        div = self.soup.find_all('div')
+        selector_element = []
+        for time_S in div:
+            if 'SelectList' in str(time_S):
+                if 'LanguageSelector' and 'flex-layout' not in str(time_S):
+                    selector_element.append(time_S)
+        print(selector_element)
+        random_element = random.choice(selector_element)
+        self.driver.find_element_by_xpath(xpath_soup(random_element)).click()
 
-def click_time_selector(web_driver):
-    div = soup.find_all('div')
-    selector_element = []
-    for time_S in div:
-        if 'SelectList' in str(time_S):
-            if 'LanguageSelector' and 'flex-layout' not in str(time_S):
-                selector_element.append(time_S)
-    print(selector_element)
-    random_element = random.choice(selector_element)
-    web_driver.find_element_by_xpath(xpath_soup(random_element)).click()
+    def page_contains_string(self, text):
+        for t in self.soup.find_all(["h1", "h2", "h3", "h4", "p"]):
+            if text in str(t):
+                return True
+        return False
 
+    # Scripting Methods
+    def open_target_page(self):
+        if self.anonymous:
+            self.driver.get(url)
+        else:
+            self.driver.get(login_url)
+        time.sleep(1)
+        self.refresh_soup()
 
-def page_contains_string(text):
-    for t in soup.find_all(["h1", "h2", "h3", "h4", "p"]):
-        if text in str(t):
-            return True
-    return False
+        # Change Language
+        self.click_button('DE')
 
+    def login(self):
+        if not self.anonymous:
+            self.refresh_soup()
 
-chrome_options = Options()
-chrome_options.add_argument("--disable-extensions")
-chrome_options.add_argument("--window-size=720,1080")
-driver = webdriver.Chrome(executable_path='/Users/drminic/Development/sdk/chromedriver', options=chrome_options)
+            # Email Input
+            input_element = None
+            for i in self.soup.find_all('input'):
+                if 'name="email"' in str(i):
+                    input_element = i
 
-url = 'https://www.impfen-saarland.de/service/login'
-email = None
+            form_element = self.driver.find_element_by_xpath(xpath_soup(input_element))
+            form_element.send_keys(self.email)
+            form_element.submit()
 
-driver.get(url)
-time.sleep(0.2)
+            # Session Toke Input
+            code_is_valid = False
+            while not code_is_valid:
+                self.refresh_soup()
 
-#################
-# Login Process #
-#################
+                if self.page_contains_string('Der eingegebene Code ist nicht gültig'):
+                    print('Code not valid, try again.\n')
 
-# Email Input
-soup = BS(driver.page_source, 'lxml')
+                input_element = None
+                for i in self.soup.find_all('input'):
+                    if '"session[token]"' in str(i):
+                        input_element = i
 
-click_button(driver, 'DE')
+                if input_element is not None:
+                    session_token = input('Code: ')
 
-input_element = None
-for i in soup.find_all('input'):
-    if 'name="email"' in str(i):
-        input_element = i
+                    form_element = self.driver.find_element_by_xpath(xpath_soup(input_element))
+                    form_element.send_keys(session_token)
+                    form_element.submit()
+                else:
+                    code_is_valid = True
 
-if email is None:
-    email = input('Email: ')
+            time.sleep(1)
 
-form_element = driver.find_element_by_xpath(xpath_soup(input_element))
-form_element.send_keys(email)
-form_element.submit()
+    def go_to_booking(self):
+        self.refresh_soup()
+        self.click_button('Buchung')
 
-# Session Toke Input
-code_is_valid = False
-while not code_is_valid:
-    soup = BS(driver.page_source, 'lxml')
+    def try_booking(self):
 
-    if page_contains_string('Der eingegebene Code ist nicht gültig'):
-        print('Code not valid, try again.\n')
+        vaccination_appointment_is_bookable = False
+        while not vaccination_appointment_is_bookable:
 
-    input_element = None
-    for i in soup.find_all('input'):
-        if '"session[token]"' in str(i):
-            input_element = i
+            time.sleep(0.1)
+            self.refresh_soup()
 
-    if input_element is not None:
-        session_token = input('Code: ')
+            impfzentrum = ['Saarbrücken', 'Saarlouis', 'Neunkirchen', 'Lebach']  # , 'Nacht-Termine']
+            choice = random.choice(impfzentrum)
+            print(choice)
+            try:
+                self.click_button(choice)
+                self.click_button('Weiter')
+            except Exception as e:
+                print(e)
 
-        form_element = driver.find_element_by_xpath(xpath_soup(input_element))
-        form_element.send_keys(session_token)
-        form_element.submit()
-    else:
-        code_is_valid = True
+            time.sleep(0.2)
+            self.refresh_soup()
 
+            if self.page_contains_string('Aktuell sind alle Impftermine belegt.'):
+                self.click_button('PrimaryButton')
+            elif self.page_contains_string('gewünschten Impftermine'):
+                print('-------termin gefunden--------')
+                self.click_time_selector()
+                self.click_button('Weiter')
 
-# Choose Booking
-soup = BS(driver.page_source, 'lxml')
-click_button(driver, 'Buchung', 'Booking')
+                if 's' in input('Type "s" to stop the loop: '):
+                    vaccination_appointment_is_bookable = True
 
-######################
-# Booking Automation #
-######################
-
-vaccination_appointment_is_booked = False
-vaccination_appointment_is_bookable = False
-
-while not vaccination_appointment_is_booked:
-    while not vaccination_appointment_is_bookable:
-
-        time.sleep(0.1)
-        soup = BS(driver.page_source, 'lxml')
-
-        impfzentrum = ['Saarbrücken', 'Saarlouis', 'Neunkirchen', 'Lebach'] #, 'Nacht-Termine']
-        choice = random.choice(impfzentrum)
-        print(choice)
-        try:
-            click_button(driver, choice)
-            click_button(driver, 'Weiter')
-        except:
-            print('To Fast lel')
-
-        time.sleep(0.2)
-        soup = BS(driver.page_source, 'lxml')
-
-        if page_contains_string('Aktuell sind alle Impftermine belegt.'):
-            click_button(driver, 'PrimaryButton')
-        elif page_contains_string('gewünschten Impftermine'):
-            vaccination_appointment_is_bookable = True
-            print('-------termin gefunden--------')
-
-    click_time_selector(driver)
-    click_button(driver, 'Weiter')
-
-    if page_contains_string('Impftermine bestätigen'):
-        vaccination_appointment_is_booked = True
-        print('Booking successful!')
-    elif page_contains_string('Aktuell sind alle Impftermine belegt.'):
-        continue
-    else:
-        print('Error')
-        break
 
