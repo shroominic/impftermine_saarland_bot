@@ -4,9 +4,9 @@
  Ich möchte zeigen, dass das aktuelle System leicht zu manipulieren ist 
  und dringend überarbeitet werden sollte.
 
- Sei fair und probier es nicht aus! 
+ Sei fair und probier's nicht aus!
 
-
+:)
 
  This project is for demonstration purposes only!
  I want to show that the current system is easy to manipulate 
