@@ -30,11 +30,14 @@ def xpath_soup(soup_element):
 class ImpfterminBot:
 
     # Initialisation
-    def __init__(self, email=None):
+    def __init__(self, impfzentren, email=None):
         self.email = email
+        self.impfzentren = impfzentren
 
         if self.email is None:
             self.anonymous = True
+        else:
+            self.anonymous = False
 
         self.driver = None
         self.soup = None
@@ -87,9 +90,6 @@ class ImpfterminBot:
         time.sleep(1)
         self.refresh_soup()
 
-        # Change Language
-        self.click_button('DE')
-
     def login(self):
         if not self.anonymous:
             self.refresh_soup()
@@ -129,19 +129,21 @@ class ImpfterminBot:
             time.sleep(1)
 
     def go_to_booking(self):
+        # Change Language
+        self.click_button('DE')
+
         self.refresh_soup()
         self.click_button('Buchung')
+        time.sleep(1)
 
     def try_booking(self):
 
         vaccination_appointment_is_bookable = False
         while not vaccination_appointment_is_bookable:
 
-            time.sleep(0.1)
             self.refresh_soup()
 
-            impfzentrum = ['Saarbrücken', 'Saarlouis', 'Neunkirchen', 'Lebach']  # , 'Nacht-Termine']
-            choice = random.choice(impfzentrum)
+            choice = random.choice(self.impfzentren)
             print(choice)
             try:
                 self.click_button(choice)
@@ -154,6 +156,7 @@ class ImpfterminBot:
 
             if self.page_contains_string('Aktuell sind alle Impftermine belegt.'):
                 self.click_button('PrimaryButton')
+                time.sleep(0.15)
             elif self.page_contains_string('gewünschten Impftermine'):
                 print('-------termin gefunden--------')
                 self.click_time_selector()
@@ -162,6 +165,10 @@ class ImpfterminBot:
                 if 's' in input('Type "s" to stop the loop: '):
                     vaccination_appointment_is_bookable = True
             else:
-                print("c'est bizarre")
+                print("Loading took too long")
+                time.sleep(3)
+                self.click_button('PrimaryButton')
+                time.sleep(0.15)
+
 
 
