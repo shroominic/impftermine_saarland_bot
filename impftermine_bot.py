@@ -158,15 +158,16 @@ class ImpfterminBot:
                 self.click_button('PrimaryButton')
                 time.sleep(0.15)
             elif self.page_contains_string('gewünschten Impftermine'):
-                print('-------termin gefunden--------')
+                print('- - - -Appointment found- - - -')
                 self.click_time_selector()
                 self.click_button('Weiter')
 
-                if 's' in input('Type "s" to stop the loop: '):
+                if 's' in input('Type "s" to stop the search: '):
                     vaccination_appointment_is_bookable = True
             else:
-                print("Loading took too long")
+                print("- - Loading took too long - -")
                 time.sleep(3)
+                self.refresh_soup()
                 self.click_button('PrimaryButton')
                 time.sleep(0.15)
 
