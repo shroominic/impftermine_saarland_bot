@@ -71,7 +71,6 @@ class ImpfterminBot:
             if 'SelectList' in str(time_S):
                 if 'LanguageSelector' and 'flex-layout' not in str(time_S):
                     selector_element.append(time_S)
-        print(selector_element)
         random_element = random.choice(selector_element)
         self.driver.find_element_by_xpath(xpath_soup(random_element)).click()
 
@@ -126,7 +125,7 @@ class ImpfterminBot:
                 else:
                     code_is_valid = True
 
-            time.sleep(1)
+            time.sleep(2)
 
     def go_to_booking(self):
         # Change Language
@@ -137,7 +136,6 @@ class ImpfterminBot:
         time.sleep(1)
 
     def try_booking(self):
-
         vaccination_appointment_is_bookable = False
         while not vaccination_appointment_is_bookable:
 
@@ -151,12 +149,12 @@ class ImpfterminBot:
             except Exception as e:
                 print(e)
 
-            time.sleep(0.2)
+            time.sleep(.2)
             self.refresh_soup()
 
             if self.page_contains_string('Aktuell sind alle Impftermine belegt.'):
                 self.click_button('PrimaryButton')
-                time.sleep(0.15)
+                time.sleep(.15)
             elif self.page_contains_string('gewünschten Impftermine'):
                 print('- - - -Appointment found- - - -')
                 self.click_time_selector()
@@ -169,7 +167,8 @@ class ImpfterminBot:
                 time.sleep(3)
                 self.refresh_soup()
                 self.click_button('PrimaryButton')
-                time.sleep(0.15)
+                time.sleep(.15)
 
+        self.driver.quit()
 
 
