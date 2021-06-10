@@ -1,7 +1,10 @@
 import impftermine_bot as ibot
 
 # Insert email for automatic login
-email = None
+if 'N' in input('Use Email? (N) '):
+    email = None
+else:
+    email = input('Email: ')
 
 impfzentren = ['Saarbrücken',
                'Saarlouis',
@@ -17,7 +20,7 @@ bot.init_chrome(chromedriver_path='./chromedriver')
 # Scripted Page Navigation
 bot.open_target_page()
 bot.login()
-# input('Select Person: ')
+input('Press ENTER to start ... ')
 bot.go_to_booking()
 
 # Booking Automation

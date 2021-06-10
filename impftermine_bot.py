@@ -1,9 +1,10 @@
-from bs4 import BeautifulSoup as BS
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+import os
 import random
 import time
 
+from bs4 import BeautifulSoup as BS
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 # URL's
 url = 'https://www.impfen-saarland.de/'
@@ -26,6 +27,10 @@ def xpath_soup(soup_element):
     return '/%s' % '/'.join(components)
 
 
+def clear():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+
 # Impftermin Bot Class
 class ImpfterminBot:
 
@@ -41,6 +46,8 @@ class ImpfterminBot:
 
         self.driver = None
         self.soup = None
+
+        self.attempts = 0
 
     def init_chrome(self, chromedriver_path):
         chrome_options = Options()
@@ -60,9 +67,11 @@ class ImpfterminBot:
         for btn in self.soup.find_all('button'):
             if text in str(btn):
                 btn_element = btn
-
-        xpath = xpath_soup(btn_element)
-        self.driver.find_element_by_xpath(xpath).click()
+        try:
+            xpath = xpath_soup(btn_element)
+            self.driver.find_element_by_xpath(xpath).click()
+        except Exception as e:
+            print(e)
 
     def click_time_selector(self):
         div = self.soup.find_all('div')
@@ -130,6 +139,7 @@ class ImpfterminBot:
     def go_to_booking(self):
         # Change Language
         self.click_button('DE')
+        time.sleep(1)
 
         self.refresh_soup()
         self.click_button('Buchung')
@@ -140,30 +150,47 @@ class ImpfterminBot:
         while not vaccination_appointment_is_bookable:
 
             self.refresh_soup()
+            self.attempts += 1
 
             choice = random.choice(self.impfzentren)
-            print(choice)
+            clear()
+            print(f'{self.attempts} - {choice}')
             try:
                 self.click_button(choice)
                 self.click_button('Weiter')
+
             except Exception as e:
                 print(e)
 
-            time.sleep(.2)
+            time.sleep(.25)
             self.refresh_soup()
 
             if self.page_contains_string('Aktuell sind alle Impftermine belegt.'):
                 self.click_button('PrimaryButton')
-                time.sleep(.15)
+                time.sleep(.1)
+
             elif self.page_contains_string('gewünschten Impftermine'):
-                print('- - - -Appointment found- - - -')
+                clear()
+                print('- - - - Appointment found - - - -')
                 self.click_time_selector()
                 self.click_button('Weiter')
+                print(f'Attempt: {self.attempts}')
+                print(f'Location: {choice} \n')
 
-                if 's' in input('Type "s" to stop the search: '):
+                time.sleep(1)
+                self.refresh_soup()
+                if self.page_contains_string('verbindlichen Buchung'):
+                    try:
+                        self.click_button('Termine buchen')
+                    except Exception as e:
+                        print(e)
+
+                if 'q' in input('Type "q" to quit: '):
                     vaccination_appointment_is_bookable = True
+
             else:
-                print("- - Loading took too long - -")
+                clear()
+                print("\nLoading ... ")
                 time.sleep(3)
                 self.refresh_soup()
                 self.click_button('PrimaryButton')
