@@ -38,12 +38,7 @@ class ImpfterminBot:
     def __init__(self, impfzentren, email=None):
         self.email = email
         self.impfzentren = impfzentren
-
-        if self.email is None:
-            self.anonymous = True
-        else:
-            self.anonymous = False
-
+        self.anonymous = False if self.email else True
         self.driver = None
         self.soup = None
 
@@ -197,5 +192,3 @@ class ImpfterminBot:
                 time.sleep(.15)
 
         self.driver.quit()
-
-
